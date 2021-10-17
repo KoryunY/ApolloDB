@@ -38,7 +38,7 @@ public class Repl {
                 case "create"-> DBMS.crt(words);
                 case "insert"-> DBMS.insert(words);
                 case "select"-> DBMS.select(words);
-                case "update"-> System.out.println("do nothing");
+                case "update"-> DBMS.update(words);
                 case "clear","remove"-> DBMS.deletion(words);
                 default -> System.out.println("Invalid command");
             }

@@ -5,7 +5,6 @@ import com.gmail.yeritsyankoryun.ApolloDb.model.Types;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -17,9 +16,9 @@ public class DBMS {
     final static List<String> dbList = retrieveDbList();
     static String current;
     static TreeMap<String, LinkedHashMap<String, Types>> schemas;
-
     //<users,<id,<k,v>>>
     static TreeMap<String, LinkedHashMap<UUID, HashMap<String, Object>>> DB;
+    static LinkedHashMap<UUID, HashMap<String, Object>> selectedElements;
 
     public static void start() {
         try {
@@ -131,7 +130,6 @@ public class DBMS {
     }
 
     public static HashMap<String, Object> createEntity(LinkedHashMap<String, Types> schema, List<String> values) {
-        System.out.println(schema);
         HashMap<String, Object> entity = new HashMap<>();
         Set<String> keys = schema.keySet();
         int i = 0;
@@ -161,9 +159,9 @@ public class DBMS {
     }
 
     private static TreeMap<String, LinkedHashMap<String, Types>> retrieveSchemas() {
-        String temp = null;
-        String[] temps = null;
-        String[] temmps = null;
+        String temp;
+        String[] temps;
+        String[] temmps;
         TreeMap<String, LinkedHashMap<String, Types>> schemasList = new TreeMap<>();
         try {
             temp = Files.readAllLines(Paths.get(dbPath + current + "Schema.txt")).toString();
@@ -288,10 +286,8 @@ public class DBMS {
             writeSchema();
             UUID id = UUID.randomUUID();
             entity.put(id, createEntity(schema, getValues(query)));
-            DB.put(query[1], entity);
-        } else {
-            DB.put(query[1], entity);
         }
+        DB.put(query[1], entity);
         writeDB();
     }
 
@@ -311,7 +307,19 @@ public class DBMS {
         writeDB();
     }
 
-    //update
+    public static void update(String[] query) {
+        List<String> newValues = getValues(query);
+
+        LinkedHashMap<String, Types> schema = createSchema(query);
+        for (UUID key : selectedElements.keySet()) {
+            int i = 0;
+            HashMap<String, Object> curr = DB.get(query[1]).get(key);
+            for (String sKey: schema.keySet()) {
+                curr.replace(sKey, typeParser(schema.get(sKey), newValues.get(i)));
+            }
+        }
+        writeDB();
+    }
 
     public static void drop() {
         try {
@@ -326,35 +334,50 @@ public class DBMS {
         if (query[0].equals("clear")) {
             if (query.length == 1) {
                 DB.clear();
-                writeDB();
             } else {
                 DB.remove(query[1]);
-                writeDB();
             }
+            writeDB();
         } else if (query[0].equals("remove")) {
-            //tobedannn
+            for (UUID key : select(query).keySet()) {
+                DB.get(query[1]).remove(key);
+            }
+            writeDB();
+            selectedElements = null;
         } else System.out.println("Invalid Delete cmd");
     }
 
     public static LinkedHashMap<UUID, HashMap<String, Object>> select(String[] query) {
-        LinkedHashMap<UUID, HashMap<String, Object>> allEntities = allEntities = DB.get(query[1]);
-
+        LinkedHashMap<UUID, HashMap<String, Object>> allEntities = DB.get(query[1]);
         if (query.length > 2) {
-            LinkedHashMap<UUID, HashMap<String, Object>> entities=new LinkedHashMap<>();
-            if(query.length==3){
-                UUID id=UUID.fromString(query[2].split("=")[1]);
-                entities.put(id,allEntities.get(id));
+            LinkedHashMap<UUID, HashMap<String, Object>> entities = new LinkedHashMap<>();
+            if (query.length == 3 && query[2].split("=")[0].equals("id")) {
+                UUID id = UUID.fromString(query[2].split("=")[1]);
+                entities.put(id, allEntities.get(id));
+                System.out.println(entities);
                 return entities;
             }
-            LinkedHashMap<String, Types> schema=createSchema(query);
-            Set<String> keys=schema.keySet();
-            List<String> values=getValues(query);
-            for(String key:keys){
-                Types type=schema.get(key);
-               // allEntities.values()
+            LinkedHashMap<String, Types> schema = createSchema(query);
+            List<String> values = getValues(query);
+            HashMap<String, Object> selQuery = createEntity(schema, values);
+            boolean contains;
+            HashMap<String, Object> entity;
+            for (UUID key : allEntities.keySet()) {
+                entity = allEntities.get(key);
+                contains = true;
+                for (String qKey : selQuery.keySet()) {
+                    if (entity.get(qKey).equals(selQuery.get(qKey))) continue;
+                    contains = false;
+                    break;
+                }
+                if (contains) {
+                    entities.put(key, entity);
+                }
             }
-             return entities;
+            selectedElements = entities;
+            return entities;
         }
+        selectedElements = allEntities;
         return allEntities;
     }
 
@@ -366,6 +389,19 @@ public class DBMS {
         return null;
     }
 
+    private static Object typeParser(Types type, String value) {
+        Object obj=null;
+        switch (type) {
+            case CHARACTER -> obj=value.charAt(0);
+            case STRING -> obj=value;
+            case INT -> obj=Integer.parseInt(value);
+            case FLOAT -> obj=Float.parseFloat(value);
+            case BOOLEAN -> obj=Boolean.parseBoolean(value);
+            case T -> obj= "YanimT";
+            case ARRAY -> obj= "YanimARRR";
+        }
+        return obj;
+    }
 
 }
 
