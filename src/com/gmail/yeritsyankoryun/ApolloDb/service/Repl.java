@@ -33,14 +33,13 @@ public class Repl {
                 default -> System.out.println("Invalid command");
             }}
             else switch (words[0]){
-                case "use"-> DBMS.setCurrent(words);//
-                case  "drop"-> System.out.println("Deletion");//
-
-                case "create"-> DBMS.createSchema(words);
+                case "use"-> DBMS.setCurrent(words);
+                case  "drop"-> DBMS.drop();
+                case "create"-> DBMS.crt(words);
                 case "insert"-> DBMS.insert(words);
-                case "select"-> System.out.println("do nothing");
+                case "select"-> DBMS.select(words);
                 case "update"-> System.out.println("do nothing");
-                case "delete"-> System.out.println("do nothing");
+                case "clear","remove"-> DBMS.deletion(words);
                 default -> System.out.println("Invalid command");
             }
         }

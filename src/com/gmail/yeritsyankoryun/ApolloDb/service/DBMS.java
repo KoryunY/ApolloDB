@@ -57,92 +57,98 @@ public class DBMS {
         else if (dbList.contains(query[1])) {
             current = query[1];
             System.out.println("Current Db set to:" + current);
+            schemas = retrieveSchemas();
+            DB = retrieveDB();
+            writeDB();
         } else {
             createDb(query[1]);
         }
-        schemas = retrieveSchemas();
-        DB = retrieveDB();
-        writeDB();
     }
 
-
-    public static void createSchema(String[] query) {
+    public static LinkedHashMap<String, Types> createSchema(String[] query) {
         if (query.length == 2)
-            createRecord(null, null, query[1]);
-
-        else {
-            String record;
-            String[] words;
-            List<String> values = new ArrayList<>();
-            LinkedHashMap<String, Types> schema = new LinkedHashMap<>();
-            for (int i = 2; i < query.length; i++) {
-                String name = null;
-                Types type = null;
-                record = query[i];
-                if (record.contains("=")) {
-                    words = record.split("=");
-                    name = words[0];
-                    record = words[1];
-                    if (record.startsWith("'") && record.endsWith("'")) {
-                        type = record.length() == 3 ? Types.CHARACTER : Types.STRING;
-                        values.add(record.substring(1, record.length() - 1));
+            return null;
+        String record;
+        String[] words;
+        LinkedHashMap<String, Types> schema = new LinkedHashMap<>();
+        for (int i = 2; i < query.length; i++) {
+            String name = null;
+            Types type = null;
+            record = query[i];
+            if (record.contains("=")) {
+                words = record.split("=");
+                name = words[0];
+                record = words[1];
+                if (record.startsWith("'") && record.endsWith("'")) {
+                    type = record.length() == 3 ? Types.CHARACTER : Types.STRING;
+                } else {
+                    if (record.equals("true") || record.equals("false")) {
+                        type = Types.BOOLEAN;
                     } else {
-                        if (record.equals("true") || record.equals("false")) {
-                            type = Types.BOOLEAN;
-                        } else {
-                            type = record.contains(".") ? Types.FLOAT : Types.INT;
-                        }
-                        values.add(record.substring(0, record.length()));
-                    }
-                } else if (record.contains(":")) {
-                    words = record.split(":");
-                    name = words[0];
-                    record = words[1];
-                    if (record.startsWith("[") && record.endsWith("]")) {
-                        type = Types.ARRAY;
-                        values.add("YaniiARRAY");
-                    } else {
-                        type = Types.T;
-                        values.add("YANITTIP");
+                        type = record.contains(".") ? Types.FLOAT : Types.INT;
                     }
                 }
-                schema.put(name, type);
+            } else if (record.contains(":")) {
+                words = record.split(":");
+                name = words[0];
+                record = words[1];
+                if (record.startsWith("[") && record.endsWith("]")) {
+                    type = Types.ARRAY;
+                } else {
+                    type = Types.T;
+                }
             }
-            schemas.put(query[1], schema);
-            writeSchema();
-            createRecord(schema, values, query[1]);
+            schema.put(name, type);
         }
+        return schema;
     }
 
-
-    public static void createRecord(LinkedHashMap<String, Types> schema, List<String> values, String name) {
-        StringBuilder text = new StringBuilder(name + ":{");
-        if (schema != null) {
-            text.append(UUID.randomUUID().toString()).append(":{");
-            Set<String> names = schema.keySet();
-            Types type;
-            int i = 0;
-            for (String val : names) {
-                type = schema.get(val);
-                text.append(val);
-                if (type == Types.STRING || type == Types.CHARACTER) {
-                    text.append("='").append(values.get(i++)).append("';");
-                } else if (type == Types.ARRAY) {
-                    text.append(":[").append(values.get(i++)).append("];");
-                } else if (type == Types.T) {
-                    text.append(":").append(values.get(i++)).append(";");
+    public static List<String> getValues(String[] query) {
+        String record;
+        String[] words;
+        List<String> values = new ArrayList<>();
+        for (int i = 2; i < query.length; i++) {
+            record = query[i];
+            if (record.contains("=")) {
+                words = record.split("=");
+                record = words[1];
+                if (record.startsWith("'") && record.endsWith("'")) {
+                    values.add(record.substring(1, record.length() - 1));
                 } else {
-                    text.append("=").append(values.get(i++)).append(";");
+                    values.add(record);
+                }
+            } else if (record.contains(":")) {
+                words = record.split(":");
+                record = words[1];
+                if (record.startsWith("[") && record.endsWith("]")) {
+                    values.add("YaniiARRAY");
+                } else {
+                    values.add("YANITTIP");
                 }
             }
-            text.append("};");
         }
-        text.append("};");
-        try {
-            Files.write(Paths.get(dbPath + current + ".txt"), text.toString().getBytes(), StandardOpenOption.APPEND);
-        } catch (IOException e) {
-            e.printStackTrace();
+        return values;
+    }
+
+    public static HashMap<String, Object> createEntity(LinkedHashMap<String, Types> schema, List<String> values) {
+        System.out.println(schema);
+        HashMap<String, Object> entity = new HashMap<>();
+        Set<String> keys = schema.keySet();
+        int i = 0;
+        Types type;
+        for (String key : keys) {
+            type = schema.get(key);
+            switch (type) {
+                case CHARACTER -> entity.put(key, values.get(i++).charAt(0));
+                case STRING -> entity.put(key, values.get(i++));
+                case INT -> entity.put(key, Integer.parseInt(values.get(i++)));
+                case FLOAT -> entity.put(key, Float.parseFloat(values.get(i++)));
+                case BOOLEAN -> entity.put(key, Boolean.parseBoolean(values.get(i++)));
+                case T -> entity.put(key, (i++) + "YanimT");
+                case ARRAY -> entity.put(key, (i++) + "YanimARRR");
+            }
         }
+        return entity;
     }
 
     private static void writeSchema() {
@@ -202,6 +208,7 @@ public class DBMS {
                     j++;
                     entities = new LinkedHashMap<>();
                 }
+
                 UUID uuid = UUID.fromString(teeemps[j].substring(0, teeemps[j].length() - 1));
                 j++;
                 temeeepeees = teeemps[j].split(";");
@@ -266,15 +273,26 @@ public class DBMS {
             dbTxt.append("};");
         }
         System.out.println(dbTxt);
-//        try {
-//            Files.writeString(Paths.get(dbPath + current + ".txt"), dbTxt.toString());
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+        try {
+            Files.writeString(Paths.get(dbPath + current + ".txt"), dbTxt.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public  static void crt(String[] query){
-
+    public static void crt(String[] query) {
+        LinkedHashMap<String, Types> schema = createSchema(query);
+        LinkedHashMap<UUID, HashMap<String, Object>> entity = new LinkedHashMap<>();
+        if (schema != null) {
+            schemas.put(query[1], schema);
+            writeSchema();
+            UUID id = UUID.randomUUID();
+            entity.put(id, createEntity(schema, getValues(query)));
+            DB.put(query[1], entity);
+        } else {
+            DB.put(query[1], entity);
+        }
+        writeDB();
     }
 
 
@@ -284,17 +302,61 @@ public class DBMS {
             return;
         }
         LinkedHashMap<String, Types> schema = schemas.get(query[1]);
-        for (int i = 2; i < query.length; i++) {
-            System.out.println(query[i] + " ");
+        if (schema == null) {
+            schema = createSchema(query);
+            schemas.put(query[1], schema);
+            writeSchema();
         }
-
+        DB.get(query[1]).put(UUID.randomUUID(), createEntity(schema, getValues(query)));
+        writeDB();
     }
 
     //update
 
-    //delete
+    public static void drop() {
+        try {
+            Files.deleteIfExists(Paths.get(dbPath + current + ".txt"));
+            Files.deleteIfExists(Paths.get(dbPath + current + "Schema.txt"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-    //select
+    public static void deletion(String[] query) {
+        if (query[0].equals("clear")) {
+            if (query.length == 1) {
+                DB.clear();
+                writeDB();
+            } else {
+                DB.remove(query[1]);
+                writeDB();
+            }
+        } else if (query[0].equals("remove")) {
+            //tobedannn
+        } else System.out.println("Invalid Delete cmd");
+    }
+
+    public static LinkedHashMap<UUID, HashMap<String, Object>> select(String[] query) {
+        LinkedHashMap<UUID, HashMap<String, Object>> allEntities = allEntities = DB.get(query[1]);
+
+        if (query.length > 2) {
+            LinkedHashMap<UUID, HashMap<String, Object>> entities=new LinkedHashMap<>();
+            if(query.length==3){
+                UUID id=UUID.fromString(query[2].split("=")[1]);
+                entities.put(id,allEntities.get(id));
+                return entities;
+            }
+            LinkedHashMap<String, Types> schema=createSchema(query);
+            Set<String> keys=schema.keySet();
+            List<String> values=getValues(query);
+            for(String key:keys){
+                Types type=schema.get(key);
+               // allEntities.values()
+            }
+             return entities;
+        }
+        return allEntities;
+    }
 
     private static Types typeIdentifier(String type) {
         for (Types types : Types.values()) {
