@@ -1,1 +1,0 @@
-{pets={name=STRING, gender=CHARACTER, age=INT}, users={name=STRING, gender=CHARACTER, age=INT, pets=T, hobbies=ARRAY, hobbies0$=STRING, hobbies1$=STRING, hobbies2$=INT, hobbies3$=BOOLEAN}}
