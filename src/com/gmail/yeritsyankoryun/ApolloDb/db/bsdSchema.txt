@@ -1,1 +1,0 @@
-{users={name=STRING, age=INT, phone=T, vaccinated=BOOLEAN, pets=ARRAY, gender=CHARACTER}}{pets={name=STRING, year=INT, srskvac=BOOLEAN, gender=CHARACTER}, users={name=STRING, age=INT, phone=T, vaccinated=BOOLEAN, pets=ARRAY, gender=CHARACTER}}
